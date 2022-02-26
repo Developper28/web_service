@@ -1,6 +1,6 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import re
-
+import subprocess
 
 class Server(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -19,7 +19,11 @@ class Server(BaseHTTPRequestHandler):
                     
 
         elif endpoint == "/versionz":
-            message = "ToDo Git Hash"
+            sbrs = subprocess.Popen("git rev-parse HEAD", shell=True, stdout=subprocess.PIPE)
+            subprocess_return = sbrs.stdout.read()
+            subprocess_return = subprocess_return.decode("utf-8")
+            print(subprocess_return)
+            message = subprocess_return
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()

@@ -2,6 +2,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import re
 import subprocess
 import json
+from datetime import datetime
 
 class Server(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -37,6 +38,19 @@ class Server(BaseHTTPRequestHandler):
             self.send_header("Content-type", "text/html")
             self.end_headers()
             self.wfile.write("Content not found".encode(encoding="utf-8"))
+
+    def log_message(self, format, *args):
+        #print("Hello %s - - [%s] %s\n" %
+        #(self.address_string(),
+        #self.log_date_time_string(),
+        #format%args))
+        # 27/Feb/2022 22:24:58
+        date_str = self.log_date_time_string()
+        date_object = datetime.strptime(date_str, "%d/%b/%Y %H:%M:%S")
+        iso_date = date_object.isoformat()
+        http_status = args[1]
+        request = args[0]
+        print("{} - {} - {}".format(iso_date,http_status,request))
 
     @staticmethod
     def process_query_path(url_path):

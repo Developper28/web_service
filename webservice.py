@@ -8,7 +8,6 @@ class Server(BaseHTTPRequestHandler):
         processed_path = Server.process_query_path(self.path)
         endpoint = processed_path["root_path"]
         params = processed_path["params"]
-        print("Hello ", processed_path)
         if endpoint == "/helloworld":
             name_str = "HelloStranger"
             if params:

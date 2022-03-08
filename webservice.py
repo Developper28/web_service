@@ -1,85 +1,58 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import re
-import subprocess
-import json
-from datetime import datetime
-
-class Server(BaseHTTPRequestHandler):
-    def do_GET(self):
-        processed_path = Server.process_query_path(self.path)
-        endpoint = processed_path["root_path"]
-        params = processed_path["params"]
-        if endpoint == "/helloworld":
-            name_str = "HelloStranger"
-            if params:
-                for param in params:
-                    if param["key"] == "name":
-                        name_str = param["value"]
-
-            message = " ".join(re.findall('[A-Z][^A-Z]*', name_str))
-            self.send_response(200)
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
-            self.wfile.write(message.encode(encoding="utf-8"))
-
-        elif endpoint == "/versionz":
-            git_hash = Server.execute_cmd("git rev-parse HEAD")
-            project_path = Server.execute_cmd("pwd")
-            project_name = project_path.split("/")[-1]
-            data = {"project_name": project_name, "git_hash": git_hash}
-            json_str = json.dumps(data)
-            self.send_response(200)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            self.wfile.write(json_str.encode(encoding="utf-8"))
-
-        else:
-            self.send_response(404)
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
-            self.wfile.write("Content not found".encode(encoding="utf-8"))
-
-    def log_message(self, format, *args):
-        #print("Hello %s - - [%s] %s\n" %
-        #(self.address_string(),
-        #self.log_date_time_string(),
-        #format%args))
-        # 27/Feb/2022 22:24:58
-        date_str = self.log_date_time_string()
-        date_object = datetime.strptime(date_str, "%d/%b/%Y %H:%M:%S")
-        iso_date = date_object.isoformat()
-        http_status = args[1]
-        request = args[0]
-        print("{} - {} - {}".format(iso_date,http_status,request))
-
-    @staticmethod
-    def process_query_path(url_path):
-        #/helloworld?name=AlfredENeumann
-        array_split = url_path.split("?")
-        root_path = array_split[0]
-        ans = {"root_path": root_path, "params": []}
-        if len(array_split) == 2:
-            params_str = array_split[1]
-            params_list = params_str.split("&")
-            for param in params_list:
-                key, value = param.split("=")
-                ans["params"].append({"key": key, "value": value})
-        return ans
-
-    @staticmethod
-    def execute_cmd(cmd):
-            sbrs = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-            subprocess_return = sbrs.stdout.read()
-            subprocess_return = subprocess_return.decode("utf-8")
-            ans = subprocess_return[:-1] # To remove /n
-            return ans
+import getopt
+import sys
+import os
+from server import Server
+from http.server import HTTPServer
 
 
 # Global Variable
-hostname = "localhost"
+hostname = "0.0.0.0"
 port = 8080
 
-if __name__ == "__main__":        
+
+def get_port_from_env():
+    key = "WEBSERVICE_PORT"
+    port_env = port
+
+    try:
+        value = os.getenv(key)
+        if value:
+            port_env = int(value)
+
+    except Exception as e:
+        print(e)
+
+    return port_env
+
+
+def get_port_from_args(args):
+    port_arg = port
+
+    try:
+        opts, _ = getopt.getopt(args, "p:")
+        for opt in opts:
+
+            if opt[0] == "-p":
+                port_arg = int(opt[1])
+
+    except Exception as e:
+        print(e)
+
+    return port_arg
+
+
+
+def init():
+    global port
+
+    # Try to get the port from the environment variables first
+    port = get_port_from_env()
+
+    # Overide the port if '-p' option is given
+    port = get_port_from_args(sys.argv[1:])
+
+
+def main():
     web_server = HTTPServer((hostname, port), Server)
     print("Server started http://{}:{}".format(hostname, port))
 
@@ -91,3 +64,7 @@ if __name__ == "__main__":
     web_server.server_close()
     print("Server closed.")
 
+
+if __name__ == "__main__":
+    init()
+    main()
